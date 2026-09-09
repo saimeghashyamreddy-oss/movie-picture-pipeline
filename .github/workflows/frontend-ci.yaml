@@ -56,29 +56,36 @@ jobs:
   build:
     needs: [lint, test]
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: starter/frontend
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Node
+      - name: Setup NodeJS
         uses: actions/setup-node@v4
         with:
           node-version: "18.14"
-          cache: "npm"
-          cache-dependency-path: starter/frontend/package-lock.json
+
+      - name: Cache npm
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('starter/frontend/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
 
       - name: Install dependencies
+        working-directory: starter/frontend
         run: npm ci
 
       - name: Run tests
-        run: CI=true npm test
+        working-directory: starter/frontend
+        run: npm run test -- --watchAll=false
 
-      - name: Build application
-        run: npm run build
+      - name: Build Docker image
+        working-directory: starter/frontend
+        run: docker build --build-arg=REACT_APP_MOVIE_API_URL=http://localhost:5000 --tag=mp-frontend:latest .
+ 
           docker build \
             --build-arg=REACT_APP_MOVIE_API_URL=http://localhost:5000 \
             --tag=mp-frontend:latest .
